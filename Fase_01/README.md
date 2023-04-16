@@ -76,6 +76,13 @@
 </p>
 
 ----------
+## Observação:
+<p align="justify">
+    Essa é uma versão inicial da linguagem, e com o passar do tempo ela pode ser modificada para melhorar a sua utilização e a sua sintaxe. Nas próximas fases, conforme o desenvolvimento do projeto, novas funcionalidades poderão ser adicionadas a essa linguagem.
+</p>
+
+
+----------
 ## Exemplos de código:
 
 <p align="justify">
