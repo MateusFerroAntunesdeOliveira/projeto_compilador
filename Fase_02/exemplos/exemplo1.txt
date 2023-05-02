@@ -1,0 +1,10 @@
+{
+	float a123 = 7.2800
+	boolean blink = FALSE
+	int port = 3
+
+	for (int i = 0; i < a123; i++) {
+		blink = !blink
+		io_output_digital(port, blink)
+	}
+}
