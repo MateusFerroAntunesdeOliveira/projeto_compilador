@@ -1,10 +1,12 @@
 {
-	float a123 = 7.2800
+	float aaa = 7.2800
 	boolean blink = FALSE
 	int port = 3
+	int i
 
-	for (int i = 0; i < a123; i++) {
-		blink = !blink
-		io_output_digital(port, blink)
+	if (port == 3) {
+		blink = TRUE
 	}
+	
+	i = 10
 }
