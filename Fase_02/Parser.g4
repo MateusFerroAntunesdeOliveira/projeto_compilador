@@ -1,15 +1,14 @@
 grammar Parser;
 
 program : block ;
-block : '{' decls stmts '}' ;
-decls : (decl)* ;
-decl : (type)? id ('=' factor)? ;
+block : '{' stmts '}' ;
+decl : type id ('=' factor)? ;
+attr : id '=' factor;
 type : 'int' | 'float' | 'boolean' | 'void' ;
-stmts : stmt | ;
+stmts : stmt+;
 
 stmt : 
       | id '(' args ')' block
-      | id
       | 'if' condition block ('elseif' condition block)* ('else' block)? 
       | 'for' '(' decl ';' bool ';' term ')' block
       | 'return' id
@@ -19,6 +18,8 @@ stmt :
       | 'io_output_digital' '(' args ')'
       | 'io_input_analog' '(' args ')'
       | 'io_output_analog' '(' args ')'
+	  | decl
+	  | attr
       ;
 call : id '(' args ')' ;
 args : arg (',' arg)* | ;

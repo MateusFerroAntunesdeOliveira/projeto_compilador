@@ -1,9 +1,19 @@
+#!/usr/bin/env python3
+
 import antlr4
+import sys
 from ParserLexer import ParserLexer
 from ParserParser import ParserParser
 
+fileName = "exemplos/exemplo1.txt";
+
+if len(sys.argv) > 1:
+    fileName = sys.argv[1]
+
+print(f"Arquivo sendo testado: {fileName}\n\n")
+
 # Crie um stream de caracteres a partir do código-fonte
-input_stream = antlr4.FileStream("exemplos/exemplo3.txt")
+input_stream = antlr4.FileStream(fileName)
 
 # Crie um lexer a partir do stream de caracteres
 lexer = ParserLexer(input_stream)
