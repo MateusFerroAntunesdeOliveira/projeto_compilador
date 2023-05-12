@@ -7,8 +7,7 @@ attr : id '=' factor;
 type : 'int' | 'float' | 'boolean' | 'void' ;
 stmts : stmt+;
 
-stmt : 
-      | id '(' args ')' block
+stmt : | id '(' args ')' block
       | 'if' condition block ('elseif' condition block)* ('else' block)? 
       | 'for' '(' decl ';' bool ';' term ')' block
       | 'return' id

@@ -1,16 +1,3 @@
 {
-	float oper(a, b) {
-		float resultado = 0
-		if (a > b) {
-			resultado = a + b
-		} else {
-			resultado = a / b
-		}
-		return resultado
-	}
-
-	int a = 10
-	int b = 5
-
-	float result = oper(b,a)
+    int aYw = 1
 }
