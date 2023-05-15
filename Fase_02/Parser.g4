@@ -1,32 +1,29 @@
-grammar Parser;
+﻿grammar Parser;
 
 program: block;
 block: '{' stmts '}';
-attr: numType ID '=' MATH? | boolType ID '=' boolOp | ID '=' (MATH|boolOp)?;
+attr: numType ID '=' math? | 'bool' ID '=' boolOp | ID '=' (math|boolOp)?;
 numType: 'int' | 'float';
-boolType: 'boolean';
 stmts: stmt+ ;
 stmt: conditional
-    | 'for' '(' attr ';' boolOp ';' attr ') ' block
-    | 'break'
-    | 'io_input_digital' '(' args ')'
-    | 'io_output_digital' '(' args ')'
-    | 'io_input_analog' '(' args ')'
-    | 'io_output_analog' '(' args ')'
     | attr
+    | 'for' attr ';' boolOp ';' attr block
+    | 'break'
+    | 'io_input_digital' args
+    | 'io_output_digital' args
+    | 'io_input_analog' args
+    | 'io_output_analog' args
     ;
 ID: [a-zA-Z] [a-zA-Z0-9]*;
-args: arglist | ;
-arglist: bool (',' arglist)? | NUM (',' arglist)? | ID (',' arglist)? | ;
 conditional: 'if' condition block ('elseif' condition block)* ('else' block)?;
-condition: '(' boolOp ')';
-boolOp: (bool|MATH|ID)? logOp (bool|MATH|ID)? | '!'boolOp | bool;
-bool: 'TRUE' | 'FALSE';
-MATH: NUM | (NUM|ID)? operator (NUM|ID)?;
+condition: boolOp;
+args: ID (',' args)? ;
+boolOp: ((bool|math|ID)? logOp (bool|math|ID)?)+ | '!'(boolOp|ID)? | bool;
+math: numeric | (numeric|ID)? operator (numeric|ID)?;
 operator: '+' | '-' | '*' | '/' | '%';
 logOp: 'OR' | 'AND' | '<' | '<=' | '>' | '>=' | '==' | '!=';
-NUM: DIGITS | DIGITSF; 
-DIGITSF: DIGITS '.' DIGITS exp?;
-exp: ('+' | '-') DIGITS;
-DIGITS: [0-9]+;
+bool : 'TRUE' | 'FALSE';
+numeric : NUM | NUM '.' NUM exp?;
+exp: 'e' ('+' | '-') NUM;
+NUM: [0-9]+; 
 WS: [ \t\r\n]+ -> channel(HIDDEN);
