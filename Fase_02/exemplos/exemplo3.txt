@@ -1,8 +1,10 @@
 {
   int x = 5
-  if (x > 0) {
-    io_output_digital(4)
+  if x > 0 {
+    int a = 4
+    io_output_digital a
   } else {
-    io_output_digital(5)
+    int b = 5
+    io_output_digital b
   }
 }

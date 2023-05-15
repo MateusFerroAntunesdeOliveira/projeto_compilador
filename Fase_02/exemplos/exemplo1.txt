@@ -1,10 +1,10 @@
 {
 	float aaa = 7.2800
-	boolean blink = FALSE
+	bool blink = FALSE
 	int port = 3
 	int i
 
-	if (port == 3) {
+	if port == 3 {
 		blink = TRUE
 	}
 	
