@@ -2,8 +2,8 @@
 
 import antlr4
 import sys
-from newParserLexer import newParserLexer
-from newParserParser import newParserParser
+from numParserLexer import numParserLexer
+from numParserParser import numParserParser
 
 fileName = "exemplos/exemplo1.txt";
 
@@ -16,13 +16,13 @@ print(f"Arquivo sendo testado: {fileName}\n\n")
 input_stream = antlr4.FileStream(fileName)
 
 # Crie um lexer a partir do stream de caracteres
-lexer = newParserLexer(input_stream)
+lexer = numParserLexer(input_stream)
 
 # Crie um stream de tokens a partir do lexer
 token_stream = antlr4.CommonTokenStream(lexer)
 
 # Crie um parser a partir do stream de tokens
-parser = newParserParser(token_stream)
+parser = numParserParser(token_stream)
 
 # Chame a regra de produção inicial do seu arquivo.g4
 tree = parser.program()

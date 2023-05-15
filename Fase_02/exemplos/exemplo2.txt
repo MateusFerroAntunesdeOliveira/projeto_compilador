@@ -1,3 +1,22 @@
 {
     int aYw = 1
+    float porraQueM3rd4 = 000000012934
+    int Op4 = 1284630521261579238141327841325642387146
+    bool eseManeiro = TRUE
+    bool op = aYw > porraQueM3rd4
+    bool not = !TRUE
+    bool not = !a < o
+    bool epa = 4 != 3
+
+    if a > 3 {
+        int a = 1
+        if TRUE != t {
+            int b = 1
+        }
+    }
+
+    bool epa = FALSE
+
+    float legal = 1.1
+    float exp = 1.1e-10
 }
