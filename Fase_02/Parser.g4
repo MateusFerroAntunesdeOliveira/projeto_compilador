@@ -2,7 +2,7 @@
 
 program: block;
 block: '{' stmts '}';
-attr: numType ID '=' math? | 'bool' ID '=' boolOp | ID '=' (math|boolOp)?;
+attr: numType ID ('=' math)? | 'bool' ID '=' boolOp | ID '=' (math|boolOp)?;
 numType: 'int' | 'float';
 stmts: stmt+ ;
 stmt: conditional

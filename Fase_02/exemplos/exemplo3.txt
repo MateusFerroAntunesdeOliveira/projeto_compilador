@@ -7,4 +7,5 @@
     int b = 5
     io_output_digital b
   }
+  int c
 }
