@@ -1,0 +1,12 @@
+{
+	float aaa = 7.2800
+	bool blink = FALSE
+	int port = 3
+	int i
+
+	if port == 3 {
+		blink = TRUE
+	}
+	
+	i = 10
+}

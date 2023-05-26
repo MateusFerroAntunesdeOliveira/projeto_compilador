@@ -1,0 +1,11 @@
+{
+  int x = 5
+  if x > 0 {
+    int a = 4
+    io_output_digital a
+  } else {
+    int b = 5
+    io_output_digital b
+  }
+  int c
+}
