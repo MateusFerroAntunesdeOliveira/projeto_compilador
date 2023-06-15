@@ -1,0 +1,7 @@
+{
+  bool btn
+  io_input_digital 10 btn
+  io_output_digital 5 btn
+  bool notBtn = !btn
+  io_output_digital 2 btn
+}

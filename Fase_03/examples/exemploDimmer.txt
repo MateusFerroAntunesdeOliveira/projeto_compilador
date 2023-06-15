@@ -1,0 +1,21 @@
+{
+  oldMin = 0
+  oldMax = 1023
+  newMin = 0
+  newMax = 255
+  newDiff = newMax - newMin
+  oldDiff = oldMax - oldMin
+  int var
+
+  for var = 0; var < 1; var ++ {
+    var = var - 1
+    int valorLido = 0
+    io_input_analog valorLido, PINO
+    valorLidoDiff = valorLido - oldMin
+    numMult = newDiff * valorLidoDiff
+    div = numMul / oldDiff
+    result = div + newMin
+    io_output_analog result, PINOSAIDA
+  }
+  
+}
