@@ -2,28 +2,32 @@
 
 import random
 import re
+import json
 
 # http://www.avr-asm-tutorial.net/avr_en/micro_beginner/instructions.html
 
-FILE_NAME = "examples/exemploFOR.txt"
+FILE_NAME = "examples/exemploIo.txt"
+ARDUINO_TYPE="MEGA"
 
 ## Definicoes do processador
-# Definicoes de Memoria (UNO)
-MEMORY = 256
-MEMORY_OCC = 1
-MAX_MEM = 2303
-
 # Definicoes de Memoria (MEGA)
-#MEMORY = 256
-#MEMORY_OCC = 2
-#MAX_MEM = 65535
+MEMORY = 512
+MEMORY_OCC = 2
+MAX_MEM = 65535
 
-# Mapeamento dos pinos Analogicos e Digitais (UNO)
-PINOUT = {
-  "B": ["8", "9", "10", "11", "12", "13", "-", "-"],
-  "C": ["A0", "A1", "A2", "A3", "A4", "A5", "-", "-"],
-  "D": ["0", "1", "2", "3", "4", "5", "6", "7"]
-}
+# Determina o esquema de pinout pelo tipo do arduino
+PINOUT_FILE = "arduino_defs/pinout_mega.txt"
+
+# Verifica o tipo de arduino
+if ARDUINO_TYPE == "UNO":
+  PINOUT_FILE = "arduino_defs/pinout_uno.txt"
+  # Definicoes de Memoria (UNO)
+  MEMORY = 256
+  MEMORY_OCC = 1
+  MAX_MEM = 2303
+  
+with open(PINOUT_FILE, "r") as pinout:
+  PINOUT = json.load(pinout)
 
 ## Lista de comandos
 # Compara os valores de registradores
@@ -259,7 +263,6 @@ def mainLoop(input, outputList):
             # Carrega registrador qualquer com 1
             oneRegister = availableRegister()
             outputList.append(LDI.format(oneRegister, 1))
-            print("Formata EOR")
             # Executa a troca do valor
             outputList.append(EOR.format(register, oneRegister))
           outputList.extend(storeVariable(variableName, register))
