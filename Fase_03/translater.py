@@ -220,21 +220,23 @@ def mainLoop(input, outputList):
   while pos < len(input):
     # Recupera o valor da posicao
     value = input[pos]
-    print(f"{pos} : {value}")
+    #print(f"{pos} : {value}")
     # Declaracao de valor inteiro
     if value == "int":
       # Recupera o nome da variavel sendo declarada
-      variableName = input[pos + 1]
+      pos += 1
+      variableName = input[pos]
       # Verifica se a variavel ja esta sendo usada
       checkVariableAlreadyUsed(variableName)
       # Determina valor padrao como zero
       variableValue = 0
       # Atribuicao de valor inteiro para a declaracao
-      if input[pos + 2] == "=":
+      if input[pos + 1] == "=":
+        pos += 1
         # Recupera o valor da atribuicao
-        checkIsInteger(input[pos + 3])
-        variableValue = int(input[pos + 3])
-        pos += 3
+        checkIsInteger(input[pos + 1])
+        pos += 1
+        variableValue = int(input[pos])
       else:
         pos += 1
       outputList.extend(attrNewVariable(variableName, variableValue))
@@ -244,14 +246,13 @@ def mainLoop(input, outputList):
       variableName = input[pos + 1]
       # Verifica se a variavel ja esta sendo usada
       checkVariableAlreadyUsed(variableName)
+      pos += 1
       variableValue = 0
-      if input[pos + 2] == "=":
-        # Recupera o valor da atribuicao
-        if input[pos + 3] == "TRUE":
-          variableValue = 1
+      if input[pos + 1] == "=":
+        pos += 1
         # Verifica se é variável
-        elif checkVariableExists(input[pos + 3]):
-          customVar = input[pos + 3]
+        if checkVariableExists(input[pos + 1]):
+          customVar = input[pos + 1]
           commands, register = storageRegister(customVar)
           outputList.append(commands)
           if customVar.startswith("!"):
@@ -262,10 +263,13 @@ def mainLoop(input, outputList):
             # Executa a troca do valor
             outputList.append(EOR.format(register, oneRegister))
           outputList.extend(storeVariable(variableName, register))
-        pos += 3
+        else:
+          # Recupera o valor da atribuicao
+          if input[pos + 1] == "TRUE":
+            variableValue = 1
+          outputList.extend(attrNewVariable(variableName, variableValue))
       else:
-        pos += 1
-      outputList.extend(attrNewVariable(variableName, variableValue))
+        outputList.extend(attrNewVariable(variableName, variableValue))
     # Declaracao de laco condicional
     elif value == "if":
       variableName1 = input[pos + 1]
