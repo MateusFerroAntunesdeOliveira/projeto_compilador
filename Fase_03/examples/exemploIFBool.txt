@@ -1,6 +1,6 @@
 {
-  int a = 6
-  if a != 5 {
+  bool a = TRUE
+  if a {
     io_output_digital 30 TRUE
   }
 }

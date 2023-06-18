@@ -6,7 +6,7 @@ import json
 
 # http://www.avr-asm-tutorial.net/avr_en/micro_beginner/instructions.html
 
-FILE_NAME = "examples/exemploIo.txt"
+FILE_NAME = "examples/exemploIFBool.txt"
 ARDUINO_TYPE="MEGA"
 
 ## Definicoes do processador
@@ -111,6 +111,16 @@ def attrNewVariable(varName, value):
   return output_list
 
 # Guarda a variavel do registrador na memoria
+def storeDirectVariable(varName, value):
+  output_list = []
+  # Recupera um registrador disponivel
+  register = availableRegister()
+  # Define o registrador recebendo um valor direto
+  output_list.append(LDI.format(register, value)),
+  output_list.extend(storeVariable(varName, register))
+  return output_list
+
+# Guarda a variavel do registrador na memoria
 def storeVariable(varName, register):
   outputList = []
   global MEMORY
@@ -180,7 +190,6 @@ def checkVariableAlreadyUsed(variableName):
 def checkIsInteger(value):
   if not bool(re.match("^[-+]?[0-9]+$", value)):
     exitWithMessage(f"O valor {value} nao e inteiro")
-  return True
 
 # Encerra o codigo
 def exitWithMessage(message):
@@ -276,58 +285,84 @@ def mainLoop(input, outputList):
     # Declaracao de laco condicional
     elif value == "if":
       variableName1 = input[pos + 1]
-      comparator = input[pos + 2]
-      variableName2 = input[pos + 3]
-      ifBraceCount = 1
-      i = pos + 5
-      while ifBraceCount > 0 and i < len(input):
-        token = input[i]
-        if token == "{":
-          ifBraceCount += 1
-        elif token == "}":
-          ifBraceCount -= 1
-        i += 1
-      closeBrace = i - 1
-      if checkIsInteger(variableName2):
+      if input[pos + 2] in COMPARATORS:
+        comparator = input[pos + 2]
+        variableName2 = input[pos + 3]
+        ifBraceCount = 1
+        i = pos + 5
+        while ifBraceCount > 0 and i < len(input):
+          token = input[i]
+          if token == "{":
+            ifBraceCount += 1
+          elif token == "}":
+            ifBraceCount -= 1
+          i += 1
+        closeBrace = i - 1
+        if checkIsInteger(variableName2):
+          comando, registrador1 = storageRegister(variableName1)
+          outputList.append(comando)
+          outputList.append(CPI.format(registrador1, variableName2))
+          methodName = formatMethodName()
+          retMethodName = formatMethodName()
+          if comparator == "==":
+            outputList.append(BREQ.format(methodName))
+          elif comparator == "!=":
+            outputList.append(BRNE.format(methodName))
+          elif comparator == ">":
+            outputList.append(BRSH.format(methodName))
+          elif comparator == ">=":
+            outputList.append(BRGE.format(methodName))
+          elif comparator == "<":
+            outputList.append(BRLO.format(methodName))
+          elif comparator == "<=":
+            outputList.append(BRLE.format(methodName))
+          outputList.append(f"{retMethodName}:")
+          METHODS_OUTPUT_LIST.append(f"{methodName}:")
+          mainLoop(input[pos + 5:closeBrace], METHODS_OUTPUT_LIST)
+          METHODS_OUTPUT_LIST.append(RJMP.format(retMethodName))
+          METHODS_OUTPUT_LIST.append("\n")
+          pos = closeBrace
+        elif not checkIsInteger(variableName1) and not checkIsInteger(variableName2):
+          #TODO Tem que fazer o caso para quando as duas variaveis sao numeros
+          if variableName1 not in VARIABLES or variableName2 not in VARIABLES:
+            # Deve gerar erro
+            print("Variaveis nao estao registradas!")
+            #TODO Tratar erro
+            #TODO Marcar como condicao falso
+          else:
+            # Nao preciso setar nenhuma
+            print(f"Ambas variaveis setadas: {variableName1} e {variableName2}")
+            print("Carregando as variaveis nos registradores...")
+            comando, registrador1 = storageRegister(variableName1)
+            outputList.append(comando)
+            comando, registrador2 = storageRegister(variableName2)
+            outputList.append(comando)
+            outputList.append(CP.format(registrador1, registrador2))
+      else:
+        ifBraceCount = 1
+        i = pos + 3
+        while ifBraceCount > 0 and i < len(input):
+          token = input[i]
+          if token == "{":
+            ifBraceCount += 1
+          elif token == "}":
+            ifBraceCount -= 1
+          i += 1
+        closeBrace = i - 1
         comando, registrador1 = storageRegister(variableName1)
         outputList.append(comando)
-        outputList.append(CPI.format(registrador1, variableName2))
+        outputList.append(CPI.format(registrador1, "1"))
         methodName = formatMethodName()
         retMethodName = formatMethodName()
-        if comparator == "==":
-          outputList.append(BREQ.format(methodName))
-        elif comparator == "!=":
-          outputList.append(BRNE.format(methodName))
-        elif comparator == ">":
-          outputList.append(BRSH.format(methodName))
-        elif comparator == ">=":
-          outputList.append(BRGE.format(methodName))
-        elif comparator == "<":
-          outputList.append(BRLO.format(methodName))
-        elif comparator == "<=":
-          outputList.append(BRLE.format(methodName))
+          
+        outputList.append(BREQ.format(methodName))
         outputList.append(f"{retMethodName}:")
         METHODS_OUTPUT_LIST.append(f"{methodName}:")
-        mainLoop(input[pos + 5:closeBrace], METHODS_OUTPUT_LIST)
+        mainLoop(input[pos + 2:closeBrace], METHODS_OUTPUT_LIST)
         METHODS_OUTPUT_LIST.append(RJMP.format(retMethodName))
         METHODS_OUTPUT_LIST.append("\n")
         pos = closeBrace
-      elif not checkIsInteger(variableName1) and not checkIsInteger(variableName2):
-        if variableName1 not in VARIABLES or variableName2 not in VARIABLES:
-          # Deve gerar erro
-          print("Variaveis nao estao registradas!")
-          #TODO Tratar erro
-          #TODO Marcar como condicao falso
-        else:
-          # Nao preciso setar nenhuma
-          print(f"Ambas variaveis setadas: {variableName1} e {variableName2}")
-          print("Carregando as variaveis nos registradores...")
-          comando, registrador1 = storageRegister(variableName1)
-          outputList.append(comando)
-          comando, registrador2 = storageRegister(variableName2)
-          outputList.append(comando)
-          outputList.append(CP.format(registrador1, registrador2))
-
+        
     # Declaracao de laco de repeticao
     elif value == "for":
       variableToBeIterated = input[pos + 1]
