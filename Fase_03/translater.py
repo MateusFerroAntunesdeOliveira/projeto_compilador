@@ -161,8 +161,9 @@ def availableRegister():
 
 # Retorna o comando para recuperar variavel
 def storageRegister(variableName):
+  variableName = removeDeniedFromVariableName(variableName)
   # Verifica se a variavel existe
-  variableName = checkVariableExists(variableName)
+  checkVariableExists(variableName)
   # Seleciona um registrador para a variavel
   register = availableRegister()
   # Indica que a variavel esta no registrador
@@ -170,14 +171,31 @@ def storageRegister(variableName):
   return LDS.format(register, str(hex(MEM_VARIABLES[variableName]))[2:]), register
 
 # Verifica se a variavel existe
-# Se for, finaliza a execucao.
-def checkVariableExists(variableName):
+# Se não existir finaliza execução
+# Se existir, retorna o nome da variável sem possível !
+def checkVariableExists(variableName, exitOnError = True):
+  variableName = removeDeniedFromVariableName(variableName)
+  result = variableName in VARIABLES.keys()
+  if not result and exitOnError:
+    exitWithMessage(f"A Variavel {variableName} nao foi declarada")
+  return result
+
+def removeDeniedFromVariableName(variableName):
   tmp = variableName
   if variableName.startswith("!"):
     tmp = variableName[1:]
-  if tmp not in VARIABLES.keys():
-    exitWithMessage(f"A Variavel {tmp} nao foi declarada")
   return tmp
+
+def realizeDeniedVariable(variableName, register):
+  outputList = list()
+  # Verifica se a variável está negada
+  if variableName.startswith("!"):
+    # Carrega registrador qualquer com 1
+    comparatorRegister = availableRegister()
+    outputList.append(LDI.format(comparatorRegister, 1))
+    # Executa a troca do valor
+    outputList.append(EOR.format(register, comparatorRegister))
+  return outputList
 
 # Verifica se a variavel ja esta sendo usada
 # Se for, finaliza a execucao.
@@ -225,6 +243,9 @@ def formatMethodName():
   METHODS += 1
   return result
 
+def isValidValue(value):
+  return value and value != "{" and value != "}"
+
 #######################################
 # Percorre os "Tokens"
 def mainLoop(input, outputList):
@@ -264,20 +285,18 @@ def mainLoop(input, outputList):
       if input[pos + 1] == "=":
         pos += 1
         # Verifica se é variável
-        if checkVariableExists(input[pos + 1]):
-          customVar = input[pos + 1]
+        if checkVariableExists(input[pos + 1], False):
+          pos += 1
+          customVar = input[pos]
+          # Recupera o valor da variável do espaço de dados para um registrador
           commands, register = storageRegister(customVar)
           outputList.append(commands)
-          if customVar.startswith("!"):
-            # Carrega registrador qualquer com 1
-            oneRegister = availableRegister()
-            outputList.append(LDI.format(oneRegister, 1))
-            # Executa a troca do valor
-            outputList.append(EOR.format(register, oneRegister))
+          outputList.extend(realizeDeniedVariable(customVar, register))
           outputList.extend(storeVariable(variableName, register))
         else:
+          pos += 1
           # Recupera o valor da atribuicao
-          if input[pos + 1] == "TRUE":
+          if input[pos] == "TRUE":
             variableValue = 1
           outputList.extend(attrNewVariable(variableName, variableValue))
       else:
@@ -285,9 +304,11 @@ def mainLoop(input, outputList):
     # Declaracao de laco condicional
     elif value == "if":
       variableName1 = input[pos + 1]
+      # Representacao do if com comparacao e valor
       if input[pos + 2] in COMPARATORS:
         comparator = input[pos + 2]
         variableName2 = input[pos + 3]
+        # Conta as chaves
         ifBraceCount = 1
         i = pos + 5
         while ifBraceCount > 0 and i < len(input):
@@ -298,6 +319,7 @@ def mainLoop(input, outputList):
             ifBraceCount -= 1
           i += 1
         closeBrace = i - 1
+        # Verifica se a segunda variavel e um valor inteiro
         if checkIsInteger(variableName2):
           comando, registrador1 = storageRegister(variableName1)
           outputList.append(comando)
@@ -316,12 +338,17 @@ def mainLoop(input, outputList):
             outputList.append(BRLO.format(methodName))
           elif comparator == "<=":
             outputList.append(BRLE.format(methodName))
+          # Poe mask de retorno
           outputList.append(f"{retMethodName}:")
+          # Cria mask de execucao
           METHODS_OUTPUT_LIST.append(f"{methodName}:")
+          # Adiciona o codigo do if a mask de execucao
           mainLoop(input[pos + 5:closeBrace], METHODS_OUTPUT_LIST)
+          # Retorna para a mask de retorno
           METHODS_OUTPUT_LIST.append(RJMP.format(retMethodName))
           METHODS_OUTPUT_LIST.append("\n")
           pos = closeBrace
+        # Verifica se as duas variaveis nao sao numeros
         elif not checkIsInteger(variableName1) and not checkIsInteger(variableName2):
           #TODO Tem que fazer o caso para quando as duas variaveis sao numeros
           if variableName1 not in VARIABLES or variableName2 not in VARIABLES:
@@ -338,6 +365,7 @@ def mainLoop(input, outputList):
             comando, registrador2 = storageRegister(variableName2)
             outputList.append(comando)
             outputList.append(CP.format(registrador1, registrador2))
+      # Representacao de if booleano
       else:
         ifBraceCount = 1
         i = pos + 3
@@ -349,16 +377,22 @@ def mainLoop(input, outputList):
             ifBraceCount -= 1
           i += 1
         closeBrace = i - 1
-        comando, registrador1 = storageRegister(variableName1)
-        outputList.append(comando)
-        outputList.append(CPI.format(registrador1, "1"))
         methodName = formatMethodName()
         retMethodName = formatMethodName()
-          
+        # Recupera a variável do sts
+        comando, registrador1 = storageRegister(variableName1)
+        outputList.append(comando)
+        # Verifica se a variavel é negada
+        outputList.extend(realizeDeniedVariable(variableName1, registrador1))
+        outputList.append(CPI.format(registrador1, "1"))
         outputList.append(BREQ.format(methodName))
+        # Poe mask de retorno
         outputList.append(f"{retMethodName}:")
+        # Cria mask de execucao
         METHODS_OUTPUT_LIST.append(f"{methodName}:")
+        # Adiciona o codigo do if a mask de execucao
         mainLoop(input[pos + 2:closeBrace], METHODS_OUTPUT_LIST)
+        # Retorna para a mask de retorno
         METHODS_OUTPUT_LIST.append(RJMP.format(retMethodName))
         METHODS_OUTPUT_LIST.append("\n")
         pos = closeBrace
@@ -469,6 +503,9 @@ def mainLoop(input, outputList):
       # Pula para o nome de retorno
       METHODS_OUTPUT_LIST.append(RJMP.format(methodNameRet))
       outputList.append(f"{methodNameRet}:")
+      pos += 2
+    elif isValidValue(value) and checkVariableExists(value) and input[pos + 1] == "=":
+      outputList.extends(storeDirectVariable(value, input[pos + 2]))
       pos += 2
     pos += 1
 

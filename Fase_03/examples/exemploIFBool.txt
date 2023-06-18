@@ -1,6 +1,6 @@
 {
   bool a = TRUE
-  if a {
+  if !a {
     io_output_digital 30 TRUE
   }
 }
