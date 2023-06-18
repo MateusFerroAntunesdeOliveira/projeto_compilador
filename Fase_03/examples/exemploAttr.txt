@@ -1,0 +1,5 @@
+{
+    bool org = TRUE
+    org = !org
+    io_output_digital 30 org
+}

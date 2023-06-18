@@ -3,11 +3,15 @@
 import random
 import re
 import json
+import sys
 
 # http://www.avr-asm-tutorial.net/avr_en/micro_beginner/instructions.html
 
-FILE_NAME = "examples/exemploIFBool.txt"
+FILE_NAME = "examples/exemploFOR.txt"
 ARDUINO_TYPE="MEGA"
+
+if len(sys.argv) > 1:
+  FILE_NAME = sys.argv[1]
 
 ## Definicoes do processador
 # Definicoes de Memoria (MEGA)
@@ -121,6 +125,7 @@ def storeDirectVariable(varName, value):
   return output_list
 
 # Guarda a variavel do registrador na memoria
+# Retorna mais de um comando
 def storeVariable(varName, register):
   outputList = []
   global MEMORY
@@ -141,8 +146,9 @@ def storeVariable(varName, register):
   VARIABLES[varName] = "sts"
   return outputList
 
-# Altera a variável declarada
 def changeStoredVariable(varName, value):
+  """Altera a variável declarada.\n
+      Retorna lista com mais de um valor"""
   outputList = []
   # Recupera a variável do sts
   command, register = storageRegister(varName)
@@ -246,6 +252,51 @@ def formatMethodName():
 def isValidValue(value):
   return value and value != "{" and value != "}"
 
+def getComparisonCommand(comparator, branchTo):
+  if comparator == "==":
+    return BREQ.format(branchTo)
+  elif comparator == "!=":
+    return BRNE.format(branchTo)
+  elif comparator == ">":
+    return BRSH.format(branchTo)
+  elif comparator == ">=":
+    return BRGE.format(branchTo)
+  elif comparator == "<":
+    return BRLO.format(branchTo)
+  elif comparator == "<=":
+    return BRLE.format(branchTo)
+  
+def isVariableInSts(variableName):
+  return VARIABLES[variableName] == "sts"
+
+# Verifica se o valor passado é uma variável ou um valor cru.
+# Se for variável, verifica se está na Memória e recupera.
+# Se for valor cru atribui à um registrador
+# Retorna o comando de recuperação ou atribuição
+# Retorna o registrador onde o valor está
+def varToAttr(value):
+  outputList = []
+  register = None
+  # Verifica se o primeiro valor é uma variável
+  if checkVariableExists(value):
+    # Verificar se a variável está negada
+    variableName = removeDeniedFromVariableName(value)
+    # Verifica onde a variável está no sts para recuperar
+    if isVariableInSts(variableName):
+      command, register = storageRegister(variableName)
+      outputList.append(command)
+    else:
+      register = VARIABLES[variableName]
+    # Verifica se a variável precisa ser negada
+    outputList.extend(realizeDeniedVariable(value, register))
+    outputList.extend(storeVariable(variableName, register))
+  else:
+    register = availableRegister()
+    # Define o registrador recebendo um valor direto
+    command = LDI.format(register, value)
+    outputList.append(command)
+  return outputList, register
+
 #######################################
 # Percorre os "Tokens"
 def mainLoop(input, outputList):
@@ -270,7 +321,7 @@ def mainLoop(input, outputList):
         # Recupera o valor da atribuicao
         checkIsInteger(input[pos + 1])
         pos += 1
-        variableValue = int(input[pos])
+        variableValue = input[pos]
       else:
         pos += 1
       outputList.extend(attrNewVariable(variableName, variableValue))
@@ -396,17 +447,17 @@ def mainLoop(input, outputList):
         METHODS_OUTPUT_LIST.append(RJMP.format(retMethodName))
         METHODS_OUTPUT_LIST.append("\n")
         pos = closeBrace
-        
     # Declaracao de laco de repeticao
     elif value == "for":
       variableToBeIterated = input[pos + 1]
       initialValueForVariable = input[pos + 3]
       comparator = input[pos + 6]
       finalValueForVariable = input[pos + 7]
-      increment = input[pos + 12]
-
+      increment = input[pos + 13]
+      
+      # Conta as chaves
       forBraceCount = 1
-      i = pos + 13
+      i = pos + 14
       while forBraceCount > 0 and i < len(input):
         token = input[i]
         if token == "{":
@@ -416,24 +467,29 @@ def mainLoop(input, outputList):
         i += 1
       closeBrace = i - 1
 
+      # Recupera a variavel do sts e coloca em um registrador
       comando, registrador = storageRegister(variableToBeIterated)
       outputList.append(comando)
       methodName = formatMethodName()
       endMethodName = formatMethodName()
-
+      # Poe a mask de execucao
       outputList.append(f"{methodName}:")
       outputList.append(CPI.format(registrador, finalValueForVariable))
 
+      # Verifica o tipo de comparacao
       if comparator == "<":
         outputList.append(BRGE.format(endMethodName)) # Ao contrario de proposito
-      
+
       outputList.append(INC.format(registrador))
       outputList.append(RJMP.format(methodName))
 
-      # Ta colocando o int c = 50 no trecho principal. Tem que por na funcao de baixo...
+      # Ta colocando o int i = 5 dentro do for...
+      # Possivelmente por conta da contagem de chaves
+      #TODO Verificar
 
+      # Adiciona o conteudo do for a mask de "fora"
       METHODS_OUTPUT_LIST.append(f"{endMethodName}:")
-      mainLoop(input[pos + 12:closeBrace], outputList)
+      mainLoop(input[pos + 15:closeBrace], METHODS_OUTPUT_LIST)
       METHODS_OUTPUT_LIST.append(RJMP.format(endMethodName))
       pos = closeBrace
 
@@ -505,8 +561,42 @@ def mainLoop(input, outputList):
       outputList.append(f"{methodNameRet}:")
       pos += 2
     elif isValidValue(value) and checkVariableExists(value) and input[pos + 1] == "=":
-      outputList.extends(storeDirectVariable(value, input[pos + 2]))
-      pos += 2
+      variable = value
+      pos += 1
+      if checkVariableExists(input[pos + 1], False):
+        # Recupera primeiro valor
+        firstValue = input[pos + 1]
+        command, registerFV = varToAttr(firstValue)
+        outputList.extend(command)
+        pos += 1
+        # Verifica o tipo de comparador
+        if input[pos + 2] in COMPARATORS:
+          comparator = input[pos + 1]
+          # Recupera segundo valor
+          secondValue = input[pos + 2]
+          command, registerSV = varToAttr(secondValue)
+          outputList.extend(command)
+          # Recupera valores de branches 
+          branch = formatMethodName()
+          returnBranch = formatMethodName()
+          outputList.append(CP.format(registerFV, registerSV))
+          # Adiciona o comando de comparação de acordo com o inserido
+          outputList.append(getComparisonCommand(comparator, branch))
+          # Adiciona comando para determinar a variável como falsa
+          outputList.extend(changeStoredVariable(variable, 0))
+          # Adiciona comando de branch de retorno
+          outputList.append(f"{returnBranch}:")
+          # Adiciona branch para determinar o valor como falso
+          METHODS_OUTPUT_LIST.append(f"{branch}:")
+          METHODS_OUTPUT_LIST.extend(changeStoredVariable(variable, 1))
+          # Pula para o nome de retorno
+          METHODS_OUTPUT_LIST.append(RJMP.format(returnBranch))
+      else:
+        valueAttr = input[pos + 1]
+        if valueAttr == "TRUE" or valueAttr == "FALSE":
+          valueAttr = 1 if valueAttr == "TRUE" else 0
+        outputList.extend([storeDirectVariable(variable, valueAttr)])
+        pos += 1
     pos += 1
 
 
