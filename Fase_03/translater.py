@@ -7,7 +7,7 @@ import sys
 
 # http://www.avr-asm-tutorial.net/avr_en/micro_beginner/instructions.html
 
-FILE_NAME = "examples/exemploFOR.txt"
+FILE_NAME = "examples/exemploSoma.txt"
 ARDUINO_TYPE="MEGA"
 
 if len(sys.argv) > 1:
@@ -58,6 +58,10 @@ BRLO = "brlo {0}"
 BRLE = "brle {0}"
 # Incrementa o valor em 1
 INC = "inc r{0}"
+# Soma dois registradores
+ADD = "add r{0}, r{1}"
+# Subtrai dois registradores
+SUB = "sub r{0}, r{1}"
 # Ou exclusivo. O valor vai para o primeiro registrador
 EOR = "eor r{0}, r{1}"
 # Pula para o nome
@@ -73,6 +77,7 @@ DIGITAL_OUTPUT_OFF_BIT = "cbi PORT{0}, {1}"
 SETUP_DIGITAL_INPUT_BIT_PORT = "cbi DDR{0}, {1}"
 
 COMPARATORS = ["==", "!=", ">", ">=", "<", "<="]
+OPERATORS = ["+", "-", "*", "/"]
 COMPARATORS_BOOL = ["AND", "OR"]
 REGISTER_LIST = [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31]
 
@@ -265,7 +270,57 @@ def getComparisonCommand(comparator, branchTo):
     return BRLO.format(branchTo)
   elif comparator == "<=":
     return BRLE.format(branchTo)
-  
+
+def verifyVariableToUse(variable):
+  outputList = []
+  # Verifica se o primeiro valor é uma variável
+  if checkVariableExists(variable):
+    # Verificar se a variável está negada
+    variableName = removeDeniedFromVariableName(variable)
+    # Verifica onde a variável está no sts para recuperar
+    if isVariableInSts(variableName):
+      command, register = storageRegister(variableName)
+      outputList.append(command)
+    else:
+      register = VARIABLES[variableName]
+  else:
+    # Carrega o primeiro valor em um registrador
+    register = availableRegister()
+    outputList.append(LDI.format(register, variable))
+  return outputList, register
+
+def addOperation(variableResult, variable1, variable2):
+  outputList = []
+  # Verifica se o primeiro valor é uma variável
+  outputList1, register1 = verifyVariableToUse(variable1)
+  outputList.extend(outputList1)
+  # Verifica se o segundo valor é uma variável
+  outputList2, register2 = verifyVariableToUse(variable2)
+  outputList.extend(outputList2)
+  # Executa a soma
+  outputList.append(ADD.format(register1, register2))
+  # Reinsere a variável no sts
+  outputList.extend(storeVariable(variableResult, register1))
+  # Limpa o registrador 2
+  outputList.append(CLR.format(register2))
+  return outputList
+
+def subOperation(variableResult, variable1, variable2):
+  outputList = []
+  # Verifica se o primeiro valor é uma variável
+  outputList1, register1 = verifyVariableToUse(variable1)
+  outputList.extend(outputList1)
+  # Verifica se o segundo valor é uma variável
+  outputList2, register2 = verifyVariableToUse(variable2)
+  outputList.extend(outputList2)
+  # Executa a subtração
+  outputList.append(SUB.format(register1, register2))
+  # Reinsere a variável no sts
+  outputList.extend(storeVariable(variableResult, register1))
+  # Limpa o registrador 2
+  outputList.append(CLR.format(register2))
+  return outputList
+
 def isVariableInSts(variableName):
   return VARIABLES[variableName] == "sts"
 
@@ -308,7 +363,7 @@ def mainLoop(input, outputList):
     #print(f"{pos} : {value}")
     
     # Declaracao de valor inteiro
-    if value == "int":
+    if value == "int" and input[pos + 4] not in OPERATORS:
       # Recupera o nome da variavel sendo declarada
       pos += 1
       variableName = input[pos]
@@ -326,6 +381,24 @@ def mainLoop(input, outputList):
       else:
         pos += 1
       outputList.extend(attrNewVariable(variableName, variableValue))
+    
+    # Declaracao de valor inteiro com operacao
+    elif value == "int" and input[pos + 4] in OPERATORS:
+      pos += 1
+      variableNameResult = input[pos]
+      variableName1 = input[pos + 2]
+      variableName2 = input[pos + 4]
+      # Recupera as variaveis
+      command, variableRegister1 = storageRegister(variableName1)
+      outputList.append(command)
+      command, variableRegister2 = storageRegister(variableName2)
+      outputList.append(command)
+      # Chama as operacoes aritmeticas
+      if input[pos + 3] == "+":
+        outputList.extend(addOperation(variableNameResult, variableName1, variableName2))
+      elif input[pos + 3] == "-":
+        outputList.extend(subOperation(variableNameResult, variableName1, variableName2))
+      pos += 4
     
     # Declaracao de valor booleano
     elif value == "bool":
@@ -610,6 +683,7 @@ def mainLoop(input, outputList):
           valueAttr = 1 if valueAttr == "TRUE" else 0
         outputList.extend([storeDirectVariable(variable, valueAttr)])
         pos += 1
+    
     pos += 1
 
 
