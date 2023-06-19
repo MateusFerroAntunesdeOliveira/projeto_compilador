@@ -7,7 +7,7 @@ import sys
 
 # http://www.avr-asm-tutorial.net/avr_en/micro_beginner/instructions.html
 
-FILE_NAME = "examples/apresentacao1.txt"
+FILE_NAME = "examples/_exemploTest.txt"
 ARDUINO_TYPE="MEGA"
 
 if len(sys.argv) > 1:
@@ -750,6 +750,8 @@ def mainLoop(input, outputList):
           outputList.append(command)
           # Adiciona comando para determinar a variável como falsa
           outputList.append(MOV.format(register, registerFV))
+          # Reinsere a variável no sts
+          outputList.extend(storeVariable(variable, register))
       else:
         valueAttr = input[pos + 1]
         if valueAttr == "TRUE" or valueAttr == "FALSE":
