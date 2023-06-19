@@ -7,7 +7,7 @@ import sys
 
 # http://www.avr-asm-tutorial.net/avr_en/micro_beginner/instructions.html
 
-FILE_NAME = "examples/exemploSoma.txt"
+FILE_NAME = "examples/apresentacao1.txt"
 ARDUINO_TYPE="MEGA"
 
 if len(sys.argv) > 1:
@@ -44,6 +44,8 @@ LDI = "ldi r{0}, {1}"
 LDS = "lds r{0}, ${1}"
 # Limpa o registrador
 CLR = "clr r{0}"
+# Copia valor do registrador para outro
+MOV = "mov r{0}, r{1}"
 # Pula instrucao se a comparacao for igual (==)
 BREQ = "breq {0}"
 # Pula instrucao se a comparacao for diferente (!=)
@@ -62,6 +64,8 @@ INC = "inc r{0}"
 ADD = "add r{0}, r{1}"
 # Subtrai dois registradores
 SUB = "sub r{0}, r{1}"
+# Multiplica dois registradores
+MUL = "mul r{0}, r{1}"
 # Ou exclusivo. O valor vai para o primeiro registrador
 EOR = "eor r{0}, r{1}"
 # Pula para o nome
@@ -216,8 +220,8 @@ def checkVariableAlreadyUsed(variableName):
 
 # Verifica se o valor e inteiro
 # Se nao for, finaliza a execucao.
-def checkIsInteger(value):
-  if not bool(re.match("^[-+]?[0-9]+$", value)):
+def checkIsInteger(value, exitOnError = False):
+  if not bool(re.match("^[-+]?[0-9]+$", value)) and exitOnError:
     exitWithMessage(f"O valor {value} nao e inteiro")
 
 # Encerra o codigo
@@ -321,6 +325,45 @@ def subOperation(variableResult, variable1, variable2):
   outputList.append(CLR.format(register2))
   return outputList
 
+def mulOperation(variableResult, variable1, variable2):
+  outputList = []
+  # Verifica se o primeiro valor é uma variável
+  outputList1, register1 = verifyVariableToUse(variable1)
+  outputList.extend(outputList1)
+  # Verifica se o segundo valor é uma variável
+  outputList2, register2 = verifyVariableToUse(variable2)
+  outputList.extend(outputList2)
+  # Executa a subtração
+  outputList.append(MUL.format(register1, register2))
+  # mul R16, R17"
+  # mov R16, R0"
+  # mov R17, R1"
+  outputList.append(MOV.format(register1, "0"))
+  outputList.append(MOV.format(register2, "1"))
+  # Reinsere a variável no sts 
+  outputList.extend(storeVariable(variableResult, register1))
+  # Limpa o registrador 2
+  outputList.append(CLR.format(register2))
+  outputList.append(CLR.format("0"))
+  outputList.append(CLR.format("1"))
+  return outputList
+
+def divOperation(variableResult, variable1, variable2):
+  outputList = []
+  # Verifica se o primeiro valor é uma variável
+  outputList1, register1 = verifyVariableToUse(variable1)
+  outputList.extend(outputList1)
+  # Verifica se o segundo valor é uma variável
+  outputList2, register2 = verifyVariableToUse(variable2)
+  outputList.extend(outputList2)
+  # Executa a subtração
+  outputList.append(MUL.format(register1, register2))
+  # Reinsere a variável no sts 
+  outputList.extend(storeVariable(variableResult, register1))
+  # Limpa o registrador 2
+  outputList.append(CLR.format(register2))
+  return outputList
+
 def isVariableInSts(variableName):
   return VARIABLES[variableName] == "sts"
 
@@ -344,7 +387,6 @@ def varToAttr(value):
       register = VARIABLES[variableName]
     # Verifica se a variável precisa ser negada
     outputList.extend(realizeDeniedVariable(value, register))
-    outputList.extend(storeVariable(variableName, register))
   else:
     register = availableRegister()
     # Define o registrador recebendo um valor direto
@@ -360,7 +402,7 @@ def mainLoop(input, outputList):
   while pos < len(input):
     # Recupera o valor da posicao
     value = input[pos]
-    #print(f"{pos} : {value}")
+    print(f"{pos} : {value}")
     
     # Declaracao de valor inteiro
     if value == "int" and input[pos + 4] not in OPERATORS:
@@ -398,6 +440,10 @@ def mainLoop(input, outputList):
         outputList.extend(addOperation(variableNameResult, variableName1, variableName2))
       elif input[pos + 3] == "-":
         outputList.extend(subOperation(variableNameResult, variableName1, variableName2))
+      elif input[pos + 3] == "*":
+        outputList.extend(mulOperation(variableNameResult, variableName1, variableName2))
+      elif input[pos + 3] == "/":
+        outputList.extend(divOperation(variableNameResult, variableName1, variableName2))
       pos += 4
     
     # Declaracao de valor booleano
@@ -417,8 +463,29 @@ def mainLoop(input, outputList):
           # Recupera o valor da variável do espaço de dados para um registrador
           commands, register = storageRegister(customVar)
           outputList.append(commands)
-          outputList.extend(realizeDeniedVariable(customVar, register))
-          outputList.extend(storeVariable(variableName, register))
+          if input[pos + 1] in COMPARATORS:
+            comparator = input[pos + 1]
+            secondVar = input[pos + 2]
+            pos += 2
+            commands, secRegister = storageRegister(secondVar)
+            outputList.append(commands)
+            branch = formatMethodName()
+            returnBranch = formatMethodName()
+            outputList.append(CP.format(register, secRegister))
+            # Adiciona o comando de comparação de acordo com o inserido
+            outputList.append(getComparisonCommand(comparator, branch))
+            # Adiciona comando para determinar a variável como falsa
+            outputList.extend(attrNewVariable(variableName, 0))
+            # Adiciona comando de branch de retorno
+            outputList.append(f"{returnBranch}:")
+            # Adiciona branch para determinar o valor como falso
+            METHODS_OUTPUT_LIST.append(f"{branch}:")
+            METHODS_OUTPUT_LIST.extend(attrNewVariable(variableName, 1))
+            # Pula para o nome de retorno
+            METHODS_OUTPUT_LIST.append(RJMP.format(returnBranch))
+          else:
+            outputList.extend(realizeDeniedVariable(customVar, register))
+            outputList.extend(storeVariable(variableName, register))
         else:
           pos += 1
           # Recupera o valor da atribuicao
@@ -588,7 +655,7 @@ def mainLoop(input, outputList):
       # Verifica se o valor para ser inserido no pino e uma variavel
       if value in VARIABLES.keys():
         # Recupera a variavel do sts e coloca em um registrador
-        command, variable_register = storageRegister(variableName)
+        command, variable_register = storageRegister(value)
         outputList.append(command)
         # Assume o registrador como value
         # Compara o valor do registrador com 1 para verificar se é verdadeiro
@@ -656,10 +723,11 @@ def mainLoop(input, outputList):
         outputList.extend(command)
         pos += 1
         # Verifica o tipo de comparador
-        if input[pos + 2] in COMPARATORS:
+        if input[pos + 1] in COMPARATORS:
           comparator = input[pos + 1]
           # Recupera segundo valor
           secondValue = input[pos + 2]
+          pos += 2
           command, registerSV = varToAttr(secondValue)
           outputList.extend(command)
           # Recupera valores de branches 
@@ -677,6 +745,11 @@ def mainLoop(input, outputList):
           METHODS_OUTPUT_LIST.extend(changeStoredVariable(variable, 1))
           # Pula para o nome de retorno
           METHODS_OUTPUT_LIST.append(RJMP.format(returnBranch))
+        else:
+          command, register = storageRegister(variable)
+          outputList.append(command)
+          # Adiciona comando para determinar a variável como falsa
+          outputList.append(MOV.format(register, registerFV))
       else:
         valueAttr = input[pos + 1]
         if valueAttr == "TRUE" or valueAttr == "FALSE":
