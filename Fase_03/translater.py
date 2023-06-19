@@ -7,7 +7,7 @@ import sys
 
 # http://www.avr-asm-tutorial.net/avr_en/micro_beginner/instructions.html
 
-FILE_NAME = "examples/_exemploTest.txt"
+FILE_NAME = "examples/apresentacao1.txt"
 ARDUINO_TYPE="MEGA"
 
 if len(sys.argv) > 1:
@@ -68,8 +68,12 @@ SUB = "sub r{0}, r{1}"
 MUL = "mul r{0}, r{1}"
 # Ou exclusivo. O valor vai para o primeiro registrador
 EOR = "eor r{0}, r{1}"
+# Chama rotina
+RCALL = "rcall {0}"
 # Pula para o nome
 RJMP = "rjmp {0}"
+# Retorna para o call
+RET = "ret"
 # Pula a próxima instrução se o pino tiver valor 1
 SBIS = "sbis PIN{0}, {1}"
 # Atribui um valor a um registrador, passa para o sts e limpa o registrador
@@ -223,6 +227,7 @@ def checkVariableAlreadyUsed(variableName):
 def checkIsInteger(value, exitOnError = False):
   if not bool(re.match("^[-+]?[0-9]+$", value)) and exitOnError:
     exitWithMessage(f"O valor {value} nao e inteiro")
+  return True
 
 # Encerra o codigo
 def exitWithMessage(message):
@@ -356,12 +361,23 @@ def divOperation(variableResult, variable1, variable2):
   # Verifica se o segundo valor é uma variável
   outputList2, register2 = verifyVariableToUse(variable2)
   outputList.extend(outputList2)
-  # Executa a subtração
-  outputList.append(MUL.format(register1, register2))
-  # Reinsere a variável no sts 
-  outputList.extend(storeVariable(variableResult, register1))
-  # Limpa o registrador 2
-  outputList.append(CLR.format(register2))
+  registerOne = availableRegister()
+  outputList.append(LDI.format(registerOne, 1))
+  registerTwo = availableRegister()
+  outputList.append(MOV.format(registerTwo, register1))
+  divLoop = formatMethodName()
+  divSair = formatMethodName()
+  # Realiza a divisao
+  outputList.append(f"{divLoop}:")
+  outputList.append(SUB.format(registerTwo, register2))
+  outputList.append(CP.format(registerTwo, register2))
+  outputList.append(BRLO.format(divSair))
+  outputList.append(INC.format(registerOne))
+  outputList.append(RJMP.format(divLoop))
+  outputList.append(f"{divSair}:")
+  
+  # Reinsere a variável no sts
+  outputList.extend(storeVariable(variableResult, registerOne))
   return outputList
 
 def isVariableInSts(variableName):

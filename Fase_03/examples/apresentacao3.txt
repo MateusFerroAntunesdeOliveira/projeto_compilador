@@ -1,0 +1,11 @@
+{
+  int a = 5
+  int b = 10
+  int c = b - a
+  if c == 5 {
+    io_output_digital 30 TRUE
+  }
+  if c != 3 {
+    io_output_digital 32 TRUE
+  }
+}
