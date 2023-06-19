@@ -306,6 +306,7 @@ def mainLoop(input, outputList):
     # Recupera o valor da posicao
     value = input[pos]
     #print(f"{pos} : {value}")
+    
     # Declaracao de valor inteiro
     if value == "int":
       # Recupera o nome da variavel sendo declarada
@@ -325,6 +326,7 @@ def mainLoop(input, outputList):
       else:
         pos += 1
       outputList.extend(attrNewVariable(variableName, variableValue))
+    
     # Declaracao de valor booleano
     elif value == "bool":
       # Recupera o nome da variavel sendo declarada
@@ -352,6 +354,7 @@ def mainLoop(input, outputList):
           outputList.extend(attrNewVariable(variableName, variableValue))
       else:
         outputList.extend(attrNewVariable(variableName, variableValue))
+    
     # Declaracao de laco condicional
     elif value == "if":
       variableName1 = input[pos + 1]
@@ -447,13 +450,12 @@ def mainLoop(input, outputList):
         METHODS_OUTPUT_LIST.append(RJMP.format(retMethodName))
         METHODS_OUTPUT_LIST.append("\n")
         pos = closeBrace
+    
     # Declaracao de laco de repeticao
     elif value == "for":
       variableToBeIterated = input[pos + 1]
-      initialValueForVariable = input[pos + 3]
       comparator = input[pos + 6]
       finalValueForVariable = input[pos + 7]
-      increment = input[pos + 13]
       
       # Conta as chaves
       forBraceCount = 1
@@ -464,6 +466,8 @@ def mainLoop(input, outputList):
           forBraceCount += 1
         elif token == "}":
           forBraceCount -= 1
+        if forBraceCount == 1:
+          break
         i += 1
       closeBrace = i - 1
 
@@ -480,16 +484,23 @@ def mainLoop(input, outputList):
       if comparator == "<":
         outputList.append(BRGE.format(endMethodName)) # Ao contrario de proposito
 
+      # Define o conteudo do for
+      forContent = input[pos + 14:closeBrace]
+      mainLoop(forContent, outputList)
+      print(f"Pegando o conteudo dentro do for: {forContent}\n")
       outputList.append(INC.format(registrador))
       outputList.append(RJMP.format(methodName))
-
-      # Ta colocando o int i = 5 dentro do for...
-      # Possivelmente por conta da contagem de chaves
-      #TODO Verificar
-
-      # Adiciona o conteudo do for a mask de "fora"
+      
+      #FIXME
+      # Ta dando erro nos casos em:
+      # Algo depois do for...
+      # If dentro do for...
+      
+      # Define o conteudo apos o for
+      afterForContent = input[closeBrace + 1:]
+      print(f"Pegando o conteudo fora do for: {afterForContent}\n")
       METHODS_OUTPUT_LIST.append(f"{endMethodName}:")
-      mainLoop(input[pos + 15:closeBrace], METHODS_OUTPUT_LIST)
+      mainLoop(afterForContent, METHODS_OUTPUT_LIST)
       METHODS_OUTPUT_LIST.append(RJMP.format(endMethodName))
       pos = closeBrace
 
@@ -560,6 +571,8 @@ def mainLoop(input, outputList):
       METHODS_OUTPUT_LIST.append(RJMP.format(methodNameRet))
       outputList.append(f"{methodNameRet}:")
       pos += 2
+    
+    # 
     elif isValidValue(value) and checkVariableExists(value) and input[pos + 1] == "=":
       variable = value
       pos += 1
